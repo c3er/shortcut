@@ -9,11 +9,24 @@ import subprocess
 import tkinter
 import tkinter.ttk as ttk
 
+import misc
+
 
 class ScriptData:
-    def __init__(self, *, name, filename):
+    def __init__(self, *, name, filepath):
         self.name = name
-        self.filename = filename
+        self.filepath = filepath
+
+    def execute(self, currentdir):
+        oldcwd = os.getcwd()
+        os.chdir(currentdir)
+        try:
+            process = subprocess.Popen(
+                'powershell -ExecutionPolicy Unrestricted "{}"'.format(self.filepath)
+            )
+            process.wait()
+        finally:
+            os.chdir(oldcwd)
 
     @classmethod
     def from_json(cls, filepath):
@@ -23,8 +36,20 @@ class ScriptData:
         for scriptentry in data["scripts"]:
             name = scriptentry["name"]
             filename = scriptentry["file"]
-            scripts.append(cls(name=name, filename=filename))
+            scripts.append(cls(
+                name=name,
+                filepath=os.path.join(misc.getdirpath(filepath), filename)
+            ))
         return scripts
+
+
+class ScriptController:
+    def __init__(self, script, cdentry):
+        self.script = script
+        self.cdentry = cdentry
+
+    def __call__(self, event=None):
+        self.script.execute(self.cdentry.value)
 
 
 class CurrentDirEntry:
@@ -33,41 +58,37 @@ class CurrentDirEntry:
 
         self.entry = ttk.Entry(parent, width=100)
         self.entry.pack(side="top")
+        self._setentry(self.entry, "C:\\")
 
     @property
     def value(self):
         return self.entry.get()
 
+    @staticmethod
+    def _setentry(entry, text):
+        entry.delete(0, 'end')
+        entry.insert(0, text)
 
-def getscriptpath(script):
-    return os.path.dirname(os.path.realpath(script))
 
-
-def create_menu(parent, scripts):
+def create_menu(parent, scripts, cdentry):
     frame = ttk.Frame(parent)
     for script in scripts:
         ttk.Button(
             frame,
             text=script.name,
-            command=lambda: print(script.filename)
+            command=ScriptController(script, cdentry)
         ).pack(fill="x")
     frame.pack(side="top", fill="both")
 
 
 def main():
-    # script = "{\n" + _test_script + "\n}"
-    # process = subprocess.Popen(
-    #     # A "script block" can only be used if powershell is executed inside powershell
-    #     "powershell -Command powershell -Command " + script
-    # )
-    # process.wait()
-
-    jsonpath = os.path.join(getscriptpath(__file__), "scripts", "scripts.json")
+    jsonpath = os.path.join(misc.getdirpath(__file__), "scripts", "scripts.json")
     scripts = ScriptData.from_json(jsonpath)
 
     root = tkinter.Tk()
+    root.wm_title("Shortcuts")
     cdentry = CurrentDirEntry(root, "Current directory")
-    create_menu(root, scripts)
+    create_menu(root, scripts, cdentry)
 
     root.mainloop()
 
