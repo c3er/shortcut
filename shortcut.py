@@ -9,6 +9,7 @@ import subprocess
 import tkinter
 import tkinter.ttk as ttk
 
+import gui.dialogs
 import misc
 
 
@@ -16,17 +17,6 @@ class ScriptData:
     def __init__(self, *, name, filepath):
         self.name = name
         self.filepath = filepath
-
-    def execute(self, currentdir):
-        oldcwd = os.getcwd()
-        os.chdir(currentdir)
-        try:
-            process = subprocess.Popen(
-                'powershell -ExecutionPolicy Unrestricted "{}"'.format(self.filepath)
-            )
-            process.wait()
-        finally:
-            os.chdir(oldcwd)
 
     @classmethod
     def from_json(cls, filepath):
@@ -49,7 +39,15 @@ class ScriptController:
         self.cdentry = cdentry
 
     def __call__(self, event=None):
-        self.script.execute(self.cdentry.value)
+        oldcwd = os.getcwd()
+        os.chdir(self.cdentry.value)
+        try:
+            process = subprocess.Popen(
+                'powershell -ExecutionPolicy Unrestricted "{}"'.format(self.script.filepath)
+            )
+            process.wait()
+        finally:
+            os.chdir(oldcwd)
 
 
 class CurrentDirEntry:
