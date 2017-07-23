@@ -1,0 +1,11 @@
+Allow execution of PowerShell scripts:
+
+Set-ExecutionPolicy unrestricted
+
+
+Check whether PowerShell scripts can be executed:
+
+Get-ExecutionPolicy
+
+Value "Unrestricted" means PowerShell scripts can be executed.
+Value "Restricted" means PowerShell scripts cannot be executed.

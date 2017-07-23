@@ -1,0 +1,8 @@
+{
+    "scripts": [
+        {
+            "name": "Test script",
+            "file": "testscript.ps1"
+        }
+    ]
+}
