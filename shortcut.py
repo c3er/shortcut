@@ -34,7 +34,8 @@ class ScriptData:
 
 
 class ScriptController:
-    def __init__(self, script, cdentry):
+    def __init__(self, parent, script, cdentry):
+        self.parent = parent
         self.script = script
         self.cdentry = cdentry
 
@@ -42,10 +43,7 @@ class ScriptController:
         oldcwd = os.getcwd()
         os.chdir(self.cdentry.value)
         try:
-            process = subprocess.Popen(
-                'powershell -ExecutionPolicy Unrestricted "{}"'.format(self.script.filepath)
-            )
-            process.wait()
+            exec_dialog = gui.dialogs.ExecutionDialog(self.parent, self.script)
         finally:
             os.chdir(oldcwd)
 
@@ -74,7 +72,7 @@ def create_menu(parent, scripts, cdentry):
         ttk.Button(
             frame,
             text=script.name,
-            command=ScriptController(script, cdentry)
+            command=ScriptController(parent, script, cdentry)
         ).pack(fill="x")
     frame.pack(side="top", fill="both")
 
