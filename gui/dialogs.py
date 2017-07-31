@@ -3,6 +3,8 @@
 
 
 import subprocess
+import threading
+import queue
 
 import tkinter
 import tkinter.ttk as ttk
@@ -121,13 +123,19 @@ class ExecutionDialog(_DialogBase):
     def __init__(self, parent, script):
         self.parent = parent
         self.handler = scriptio.ScriptIOHandler()
+
         self.process = subprocess.Popen(
             'powershell -ExecutionPolicy Unrestricted "{}"'.format(script.filepath),
+            bufsize=1,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             stdin=subprocess.PIPE,
             universal_newlines=True
         )
+
+        self.outputbuffer = self._init_reader(self.process.stdout)
+        self.errorbuffer = self._init_reader(self.process.stderr)
+
         parent.after(100, self._poll_process)
         super().__init__(parent, "Executing {}".format(script.name))
 
@@ -154,14 +162,6 @@ class ExecutionDialog(_DialogBase):
     def buttonbox(self):
         box = ttk.Frame(self)
 
-        self.stopbutton = ttk.Button(
-            box,
-            text="Stop",
-            width=10,
-            command=self.stop
-        )
-        self.stopbutton.pack(side='right', padx=5, pady=5)
-
         self.closebutton = ttk.Button(
             box,
             text="Close",
@@ -171,6 +171,14 @@ class ExecutionDialog(_DialogBase):
         )
         self.closebutton.pack(side='right', padx=5, pady=5)
 
+        self.stopbutton = ttk.Button(
+            box,
+            text="Stop",
+            width=10,
+            command=self.stop
+        )
+        self.stopbutton.pack(side='right', padx=5, pady=5)
+
         box.pack(fill='x')
 
     def validate(self):
@@ -179,8 +187,8 @@ class ExecutionDialog(_DialogBase):
 
     def _poll_process(self):
         if self.executing:
-            stdout = self.process.stdout.read()
-            stderr = self.process.stderr.read()
+            stdout = self._read(self.outputbuffer)
+            stderr = self._read(self.errorbuffer)
             stdin = self.handler.input
 
             if stdout:
@@ -194,6 +202,28 @@ class ExecutionDialog(_DialogBase):
         else:
             self.set_close(True)
             self.set_stop(False)
+
+    # Based on: https://stackoverflow.com/a/4896288 ############################
+    @staticmethod
+    def _read(buffer):
+        try:
+            return buffer.get_nowait()
+        except queue.Empty:
+            return ""
+
+    def _init_reader(self, file):
+        q = queue.Queue()
+        reader = threading.Thread(target=self._reader, args=(file, q))
+        reader.daemon = True
+        reader.start()
+        return q
+
+    @staticmethod
+    def _reader(file, buffer):
+        for line in iter(file.readline, ""):
+            buffer.put(line)
+        file.close()
+    ############################################################################
 
     @staticmethod
     def _statestr(isenabled):
