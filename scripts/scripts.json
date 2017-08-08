@@ -3,6 +3,10 @@
         {
             "name": "Test script",
             "file": "testscript.ps1"
+        },
+        {
+            "name": "Script with failure",
+            "file": "failure.ps1"
         }
     ]
 }

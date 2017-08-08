@@ -11,12 +11,16 @@ import tkinter.ttk as ttk
 
 import gui.dialogs
 import misc
+from misc import debug
 
 
 class ScriptData:
     def __init__(self, *, name, filepath):
         self.name = name
         self.filepath = filepath
+
+    def __str__(self):
+        return "{}: {}".format(self.name, self.filepath)
 
     @classmethod
     def from_json(cls, filepath):
@@ -43,6 +47,7 @@ class ScriptController:
         oldcwd = os.getcwd()
         os.chdir(self.cdentry.value)
         try:
+            debug(self.script)
             exec_dialog = gui.dialogs.ExecutionDialog(self.parent, self.script)
         finally:
             os.chdir(oldcwd)

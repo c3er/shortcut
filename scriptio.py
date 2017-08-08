@@ -23,32 +23,6 @@ class OutputType(enum.Enum):
     exception = 3
 
 
-class FakeFileBase:
-    def __init__(self, handler):
-        self.handler = handler
-
-    def write(self, msg):
-        raise NotImplementedError("write")
-
-    def read(self):
-        raise NotImplementedError("read")
-
-
-class StdOut(FakeFileBase):
-    def write(self, msg):
-        self.handler.out(msg)
-
-
-class StdErr(FakeFileBase):
-    def write(self, msg):
-        self.handler.error(msg)
-
-
-class StdIn(FakeFileBase):
-    def read(self):
-        return self.handler.read()
-
-
 class Output:
     def __init__(self, outputtype, msg):
         self.type = outputtype

@@ -129,8 +129,7 @@ class ExecutionDialog(_DialogBase):
             bufsize=1,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            stdin=subprocess.PIPE,
-            universal_newlines=True
+            stdin=subprocess.PIPE
         )
 
         self.outputbuffer = self._init_reader(self.process.stdout)
@@ -187,29 +186,35 @@ class ExecutionDialog(_DialogBase):
 
     def _poll_process(self):
         if self.executing:
-            stdout = self._read(self.outputbuffer)
-            stderr = self._read(self.errorbuffer)
+            self._output()
             stdin = self.handler.input
-
-            if stdout:
-                self.handler.out(stdout)
-            if stderr:
-                self.handler.error(stderr)
             if stdin:
                 self.process.stdin.write(stdin)
 
             self.parent.after(100, self._poll_process)
         else:
+            self._output()
             self.set_close(True)
             self.set_stop(False)
+
+    def _output(self):
+            stdout = self._read(self.outputbuffer)
+            stderr = self._read(self.errorbuffer)
+            if stdout:
+                self.handler.out(stdout)
+            if stderr:
+                self.handler.error(stderr)
 
     # Based on: https://stackoverflow.com/a/4896288 ############################
     @staticmethod
     def _read(buffer):
-        try:
-            return buffer.get_nowait()
-        except queue.Empty:
-            return ""
+        lines = []
+        while True:
+            try:
+                lines.append(buffer.get_nowait())
+            except queue.Empty:
+                break
+        return "\n".join(lines)
 
     def _init_reader(self, file):
         q = queue.Queue()
@@ -220,7 +225,8 @@ class ExecutionDialog(_DialogBase):
 
     @staticmethod
     def _reader(file, buffer):
-        for line in iter(file.readline, ""):
+        for linedata in iter(file.readline, b""):
+            line = linedata.decode("cp437")
             buffer.put(line)
         file.close()
     ############################################################################
